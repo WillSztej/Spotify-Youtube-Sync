@@ -1,6 +1,7 @@
 import time
 import spotipy
 from flask import Flask, redirect, session, request
+from spotipy import SpotifyException
 from spotipy.oauth2 import SpotifyOAuth, SpotifyClientCredentials
 import os
 import dotenv
@@ -42,8 +43,27 @@ def test_write():
 
     sp = spotipy.Spotify(auth=session.get('token_info').get('access_token'))
     user_id = sp.me()['id']
-    sp.user_playlist_create(user_id, "spotify_playlist", True, False, "this playlist was made with code!")
-    return "Playlist has been created!"
+
+    playlist_id = '05gSRzwG80a71s9bjZK58O'
+    new_playlist_created = False
+
+    try:
+        playlist = sp.playlist(playlist_id)
+    except SpotifyException:
+        playlist_create_response = sp.user_playlist_create(user_id, "my_spotify_playlist", True, False,
+                                                           "this playlist was made with code!")
+        playlist_id = playlist_create_response.get('id')
+        new_playlist_created = True
+
+    search_tracks = sp.search(q='artist:' + 'Post Malone' + ' track:' + 'Go Flex', type='track', limit=1)
+    track_list = [search_tracks.get('tracks').get('items')[0].get('id')]
+    sp.playlist_add_items(playlist_id, track_list)
+
+    if (new_playlist_created):
+        return "Playlist has been created!"
+    else:
+        return "Playlist has been updated!"
+
 
 
 def verify_token():
